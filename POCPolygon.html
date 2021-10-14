@@ -1,0 +1,429 @@
+<html class=" js flexbox canvas canvastext webgl no-touch geolocation postmessage websqldatabase indexeddb hashchange history draganddrop websockets rgba hsla multiplebgs backgroundsize borderimage borderradius boxshadow textshadow opacity cssanimations csscolumns cssgradients cssreflections csstransforms csstransforms3d csstransitions fontface generatedcontent video audio localstorage sessionstorage webworkers no-applicationcache svg inlinesvg smil svgclippaths"><head>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <title>Adding an &lt;img&gt; element to &lt;canvas&gt; using Fabric.js</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="googlebot" content="noindex, nofollow">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+
+
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.6.2/modernizr.min.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/451/fabric.min.js"></script>
+
+  <style id="compiled-css" type="text/css">
+      #canvas-container {
+    position: relative;
+    width: 800px;
+    height: 600px;
+    box-shadow: 0 0 5px 1px black;
+    margin: 10px auto;
+    border: 5px solid transparent;
+}
+#canvas-container.over {
+    border: 5px dashed cyan;
+}
+#images img.img_dragging {
+    opacity: 0.4;
+}
+/* 
+Styles below based on  http://www.html5rocks.com/en/tutorials/dnd/basics/ 
+*/
+
+/* Prevent the text contents of draggable elements from being selectable. */
+[draggable] {
+    -moz-user-select: none;
+    -khtml-user-select: none;
+    -webkit-user-select: none;
+    user-select: none;
+    /* Required to make elements draggable in old WebKit */
+    -khtml-user-drag: element;
+    -webkit-user-drag: element;
+    cursor: move;
+}
+    /* EOS */
+
+
+
+    #drop-region {
+      background-color: #fff;
+      border-radius:20px;
+      box-shadow:0 0 35px rgba(0,0,0,0.05);
+      padding:60px 40px;
+      text-align: center;
+      cursor:pointer;
+      transition:.3s;
+  }
+  #drop-region:hover {
+      box-shadow:0 0 45px rgba(0,0,0,0.1);
+  }
+  
+  #image-preview {
+      margin-top:20px;
+  }
+  #image-preview .image-view {
+      display: inline-block;
+      position:relative;
+      margin-right: 13px;
+      margin-bottom: 13px;
+  }
+  #image-preview .image-view img {
+      max-width: 100px;
+      max-height: 100px;
+  }
+  #image-preview .overlay {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      right: 0;
+      z-index: 2;
+      background: rgba(255,255,255,0.5);
+  }
+      /* EOS */
+  </style>
+
+  <script id="insert"></script>
+
+
+</head>
+<body>
+
+  <div id="drop-region">
+    <div class="drop-message">
+        Drag &amp; Drop images or click to upload
+    </div>
+    <div id="image-preview"></div>
+</div>
+
+    <!-- Based on the tutorial at http://www.html5rocks.com/en/tutorials/dnd/basics/ -->
+<div id="images">
+  
+</div>
+
+<div id="canvas-container">
+  <canvas id="canvas" width="800" height="600"></canvas>
+</div>
+
+
+
+    <script type="text/javascript">//<![CDATA[
+
+
+/* Drag and Drop code adapted from http://www.html5rocks.com/en/tutorials/dnd/basics/ */
+
+var canvas = new fabric.Canvas('canvas');
+
+// set icon
+var deleteIcon = "data:image/svg+xml,%3C%3Fxml version='1.0' encoding='utf-8'%3F%3E%3C!DOCTYPE svg PUBLIC '-//W3C//DTD SVG 1.1//EN' 'http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd'%3E%3Csvg version='1.1' id='Ebene_1' xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' x='0px' y='0px' width='595.275px' height='595.275px' viewBox='200 215 230 470' xml:space='preserve'%3E%3Ccircle style='fill:%23F44336;' cx='299.76' cy='439.067' r='218.516'/%3E%3Cg%3E%3Crect x='267.162' y='307.978' transform='matrix(0.7071 -0.7071 0.7071 0.7071 -222.6202 340.6915)' style='fill:white;' width='65.545' height='262.18'/%3E%3Crect x='266.988' y='308.153' transform='matrix(0.7071 0.7071 -0.7071 0.7071 398.3889 -83.3116)' style='fill:white;' width='65.544' height='262.179'/%3E%3C/g%3E%3C/svg%3E";
+
+var cloneIcon = "data:image/svg+xml,%3C%3Fxml version='1.0' encoding='iso-8859-1'%3F%3E%3Csvg version='1.1' xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' viewBox='0 0 55.699 55.699' width='100px' height='100px' xml:space='preserve'%3E%3Cpath style='fill:%23010002;' d='M51.51,18.001c-0.006-0.085-0.022-0.167-0.05-0.248c-0.012-0.034-0.02-0.067-0.035-0.1 c-0.049-0.106-0.109-0.206-0.194-0.291v-0.001l0,0c0,0-0.001-0.001-0.001-0.002L34.161,0.293c-0.086-0.087-0.188-0.148-0.295-0.197 c-0.027-0.013-0.057-0.02-0.086-0.03c-0.086-0.029-0.174-0.048-0.265-0.053C33.494,0.011,33.475,0,33.453,0H22.177 c-3.678,0-6.669,2.992-6.669,6.67v1.674h-4.663c-3.678,0-6.67,2.992-6.67,6.67V49.03c0,3.678,2.992,6.669,6.67,6.669h22.677 c3.677,0,6.669-2.991,6.669-6.669v-1.675h4.664c3.678,0,6.669-2.991,6.669-6.669V18.069C51.524,18.045,51.512,18.025,51.51,18.001z M34.454,3.414l13.655,13.655h-8.985c-2.575,0-4.67-2.095-4.67-4.67V3.414z M38.191,49.029c0,2.574-2.095,4.669-4.669,4.669H10.845 c-2.575,0-4.67-2.095-4.67-4.669V15.014c0-2.575,2.095-4.67,4.67-4.67h5.663h4.614v10.399c0,3.678,2.991,6.669,6.668,6.669h10.4 v18.942L38.191,49.029L38.191,49.029z M36.777,25.412h-8.986c-2.574,0-4.668-2.094-4.668-4.669v-8.985L36.777,25.412z M44.855,45.355h-4.664V26.412c0-0.023-0.012-0.044-0.014-0.067c-0.006-0.085-0.021-0.167-0.049-0.249 c-0.012-0.033-0.021-0.066-0.036-0.1c-0.048-0.105-0.109-0.205-0.194-0.29l0,0l0,0c0-0.001-0.001-0.002-0.001-0.002L22.829,8.637 c-0.087-0.086-0.188-0.147-0.295-0.196c-0.029-0.013-0.058-0.021-0.088-0.031c-0.086-0.03-0.172-0.048-0.263-0.053 c-0.021-0.002-0.04-0.013-0.062-0.013h-4.614V6.67c0-2.575,2.095-4.67,4.669-4.67h10.277v10.4c0,3.678,2.992,6.67,6.67,6.67h10.399 v21.616C49.524,43.26,47.429,45.355,44.855,45.355z'/%3E%3C/svg%3E%0A"
+
+var polygonIcon = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAARCAMAAADqmnyMAAAAAXNSR0IB2cksfwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAPlQTFRFAAAAU1NTCQkJAAAABwcHAgICBgYGXl5e7u7ux8fHEhISV1dXcnJyeHh4c3NzampqdnZ2dHR0cXFxXFxcAQEBurq6VlZWMzMz4+PjOjo6T09PqKioDQ0NoKCgn5+fEBAQrKysPDw8UFBQTk5OOTk5lpaWFRUVsrKyvr6+5eXlLCwsZmZmX19fKysr4+PjGhoaz8/P09PTICAgISEhS0tLFxcXd3d3Hx8fzMzMGBgYfn5+39/fNDQ0XV1dYmJinZ2dsbGxt7e3Dw8PkZGRQUFBSkpKl5eXsLCwTU1NLS0tNTU1w8PDVFRUdXV1WFhYBAQEAwMDBQUFWVlZTFakFQAAAFN0Uk5TAP////////8Q////////////////////QP////////////////////+g/////8D///////////////+g//////////////////////////////+QUBKdAAAAuElEQVR4nF2Q1QKCUBBER+HaAna3Yovdit2B/v/HSBjgeZjZPW+7gIzJTNGEpoiFoqyATVGwO5wuN8NyHq/b5w9AIxgK40MkqnUsnvg6JFNptTNZ6MjllSzwRb0sxQtAuVKFgVq9AU5oGmWrzaDTxR+mHvqDodHZR2NMpjOjnNflEFMLvVuu1nJONlu97G7UKgq7nxPpvTYcjl8XPr1vx5m/sFeGYb0sd+E/X8KN3AmRJP9Dkp7K/gJLDBHJDb8WfQAAAABJRU5ErkJggg==";
+
+var deleteImg = document.createElement('img');
+deleteImg.src = deleteIcon;
+
+var cloneImg = document.createElement('img');
+cloneImg.src = cloneIcon;
+
+var polygonImg = document.createElement('img');
+polygonImg.src = polygonIcon;
+
+fabric.Object.prototype.transparentCorners = false;
+fabric.Object.prototype.cornerSize = 6;
+fabric.Object.prototype.cornerColor = '#0000005e';
+fabric.Object.prototype.cornerStyle = 'circle';
+
+fabric.Group.prototype.hasControls = false;
+
+function renderIcon(icon) {
+  return function renderIcon(ctx, left, top, styleOverride, fabricObject) {
+    var size = this.cornerSize;
+    ctx.save();
+    ctx.translate(left, top);
+    ctx.rotate(fabric.util.degreesToRadians(fabricObject.angle));
+    ctx.drawImage(icon, -size/2, -size/2, size, size);
+    ctx.restore();
+  }
+}
+
+fabric.Object.prototype.controls.deleteControl = new fabric.Control({
+  x: 0.5,
+  y: -0.5,
+  offsetY: -16,
+  offsetX: 16,
+  cursorStyle: 'pointer',
+  mouseUpHandler: deleteObject,
+  render: renderIcon(deleteImg),
+  cornerSize: 24
+});
+
+fabric.Object.prototype.controls.clone = new fabric.Control({
+  x: -0.5,
+  y: -0.5,
+  offsetY: -16,
+  offsetX: -16,
+  cursorStyle: 'pointer',
+  mouseUpHandler: cloneObject,
+  render: renderIcon(cloneImg),
+  cornerSize: 24
+});
+
+
+/* 
+NOTE: the start and end handlers are events for the <img> elements; the rest are bound to 
+the canvas container.
+*/
+
+function deleteObject(eventData, transform) {
+                var target = transform.target;
+		var canvas = target.canvas;
+		    canvas.remove(target);
+        canvas.requestRenderAll();
+	}
+
+  function cloneObject(eventData, transform) {
+    var target = transform.target;
+    var canvas = target.canvas;
+    target.clone(function(cloned) {
+      cloned.left += 10;
+      cloned.top += 10;
+      canvas.add(cloned);
+    });
+  }
+
+
+function handleDragStart(e) {
+    [].forEach.call(images, function (img) {
+        img.classList.remove('img_dragging');
+    });
+    this.classList.add('img_dragging');
+}
+
+function handleDragOver(e) {
+    if (e.preventDefault) {
+        e.preventDefault(); // Necessary. Allows us to drop.
+    }
+
+    e.dataTransfer.dropEffect = 'copy'; // See the section on the DataTransfer object.
+    // NOTE: comment above refers to the article (see top) -natchiketa
+
+    return false;
+}
+
+function handleDragEnter(e) {
+    // this / e.target is the current hover target.
+    this.classList.add('over');
+}
+
+function handleDragLeave(e) {
+    this.classList.remove('over'); // this / e.target is previous target element.
+}
+
+function handleDrop(e) {
+    // this / e.target is current target element.
+    if (e.stopPropagation) {
+        e.stopPropagation(); // stops the browser from redirecting.
+    }
+
+    var img = document.querySelector('#images img.img_dragging');
+
+    console.log('event: ', e);
+
+ 
+
+    var newImage = fabric.Image.fromURL(img.src, function(myImg) {
+  //i create an extra var for to change some image properties
+  var img1 = myImg.set({ left: e.layerX, top: e.layerY ,width:myImg.width,height:myImg.height});
+  canvas.add(img1); 
+  });
+
+    return false;
+}
+
+function handleDragEnd(e) {
+    // this/e.target is the source node.
+    [].forEach.call(images, function (img) {
+        img.classList.remove('img_dragging');
+    });
+}
+
+if (Modernizr.draganddrop) {
+    // Browser supports HTML5 DnD.
+
+    // Bind the event listeners for the image elements
+    var images = document.querySelectorAll('#images img');
+    [].forEach.call(images, function (img) {
+        img.addEventListener('dragstart', handleDragStart, false);
+        img.addEventListener('dragend', handleDragEnd, false);
+    });
+    // Bind the event listeners for the canvas
+    var canvasContainer = document.getElementById('canvas-container');
+    canvasContainer.addEventListener('dragenter', handleDragEnter, false);
+    canvasContainer.addEventListener('dragover', handleDragOver, false);
+    canvasContainer.addEventListener('dragleave', handleDragLeave, false);
+    canvasContainer.addEventListener('drop', handleDrop, false);
+} else {
+    // Replace with a fallback to a library solution.
+    alert("This browser doesn't support the HTML5 Drag and Drop API.");
+}
+
+
+
+// ***************************** Zone Drag Drop Img ****************************
+
+  
+var // where files are dropped + file selector is opened
+      dropRegion = document.getElementById("drop-region"),
+      // where images are previewed
+      imagePreviewRegion = document.getElementById("image-preview"),
+      imagePreview = document.getElementById("images");
+  
+  
+  // open file selector when clicked on the drop region
+  var fakeInput = document.createElement("input");
+  fakeInput.type = "file";
+  fakeInput.accept = "image/*";
+  fakeInput.multiple = true;
+  dropRegion.addEventListener('click', function() {
+      fakeInput.click();
+  });
+  
+  fakeInput.addEventListener("change", function() {
+      var files = fakeInput.files;
+      handleFiles(files);
+  });
+  
+  
+  function preventDefault(e) {
+      e.preventDefault();
+        e.stopPropagation();
+  }
+  
+  dropRegion.addEventListener('dragenter', preventDefault, false)
+  dropRegion.addEventListener('dragleave', preventDefault, false)
+  dropRegion.addEventListener('dragover', preventDefault, false)
+  dropRegion.addEventListener('drop', preventDefault, false)
+  
+  
+  function handleDropImg(e) {
+      var dt = e.dataTransfer,
+          files = dt.files;
+  
+      if (files.length) {
+  
+          handleFiles(files);
+          
+      } else {
+  
+          // check for img
+          var html = dt.getData('text/html'),
+              match = html && /\bsrc="?([^"\s]+)"?\s*/.exec(html),
+              url = match && match[1];
+  
+  
+  
+          if (url) {
+              uploadImageFromURL(url);
+              return;
+          }
+  
+      }
+  
+  
+      function uploadImageFromURL(url) {
+          var img = new Image;
+          var c = document.createElement("canvas");
+          var ctx = c.getContext("2d");
+  
+          img.onload = function() {
+              c.width = this.naturalWidth;     // update canvas size to match image
+              c.height = this.naturalHeight;
+              ctx.drawImage(this, 0, 0);       // draw in image
+              c.toBlob(function(blob) {        // get content as PNG blob
+  
+                  // call our main function
+                  handleFiles( [blob] );
+  
+              }, "image/png");
+          };
+          img.onerror = function() {
+              alert("Error in uploading");
+          }
+          img.crossOrigin = "";              // if from different origin
+          img.src = url;
+      }
+  
+  }
+  
+  dropRegion.addEventListener('drop', handleDropImg, false);
+  
+  
+  
+  function handleFiles(files) {
+      for (var i = 0, len = files.length; i < len; i++) {
+          if (validateImage(files[i]))
+              previewAnduploadImage(files[i]);
+      }
+  }
+  
+  function validateImage(image) {
+      // check the type
+      var validTypes = ['image/jpeg', 'image/png', 'image/gif'];
+      if (validTypes.indexOf( image.type ) === -1) {
+          alert("Invalid File Type");
+          return false;
+      }
+  
+      // check the size
+      var maxSizeInBytes = 10e6; // 10MB
+      if (image.size > maxSizeInBytes) {
+          alert("File too large");
+          return false;
+      }
+  
+      return true;
+  
+  }
+  
+  function previewAnduploadImage(image) {
+  
+      // container
+     /* var imgView = document.createElement("div");
+      imgView.className = "image-view";
+      imagePreviewRegion.appendChild(imgView);
+  */
+
+      // previewing image
+      var img = document.createElement("img");
+      img.setAttribute('draggable','true');
+      imagePreview.appendChild(img);
+
+  
+  
+      // read the image...
+      var reader = new FileReader();
+      reader.onload = function(e) {
+          img.src = e.target.result;
+      }
+      reader.readAsDataURL(image);
+  
+       images = document.querySelectorAll('#images img');
+    [].forEach.call(images, function (img) {
+        img.addEventListener('dragstart', handleDragStart, false);
+        img.addEventListener('dragend', handleDragEnd, false);
+    });
+    
+  
+  }
+// ***************************** End Zone Drag Drop Img ****************************
+
+ </script>
+
+
+
+
+
+</body></html>
